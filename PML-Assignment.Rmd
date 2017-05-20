@@ -1,0 +1,130 @@
+---
+title: "Practical Machine learning Assessment"
+author: "Shripad Kondra"
+date: "20/05/2017"
+output:
+  html_document: default
+  md_document:
+    variant: markdown_github
+  pdf_document: default
+---
+
+```{r opts, echo = TRUE}
+knitr::opts_chunk$set(
+  fig.path = "figure/"
+)
+```
+
+
+## Executive Summary
+In this project, we will use data recorded from accelerometers on the belt, forearm, arm, and dumbbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+More information is available from the website http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+The goal of this project is to predict the manner in which the participants did the exercise. This is the classe variable of the training set, which classifies the correct and incorrect outcomes into A, B, C, D, and E categories. 
+
+```{r}
+library(caret)
+library(rpart)
+library(randomForest)
+```
+
+
+## Loading and preprocessing the data
+
+```{r}
+training <- read.csv("pml-training.csv", na.strings = c("NA", "#DIV/0!", ""))
+testing  <- read.csv("pml-testing.csv",  na.strings = c("NA", "#DIV/0!", ""))
+```
+
+
+## Exploratory Data Analysis
+
+```{r}
+dim(training)
+dim(testing)
+#str(training)
+str(training[,1:20]) # displaying only first 20 cols for the assignment
+```
+
+The data has cols with many NA values and also first 7 cols seems to be user related info. We will remove this cols
+
+## Cleaning the Data
+
+```{r}
+CleanedTrainData <- training[, colSums(is.na(training)) == 0] # remove cols with NA values
+CleanedTrainData <- CleanedTrainData[, -c(1:7)]
+d <- dim(CleanedTrainData)
+str(CleanedTrainData[,-c(1:(d[2]-10))]) # displaying last 10 cols
+```
+
+## Data Partitioning for Training
+
+```{r}
+set.seed(1234)
+inTrain<-createDataPartition(y=CleanedTrainData$classe, p=0.7,list=F)
+TrainSubset<-CleanedTrainData[inTrain,] 
+TestSubset<-CleanedTrainData[-inTrain,] 
+d1 <- dim(TrainSubset)
+d2 <- dim(TestSubset)
+print(paste("No of Training Samples : ", d1[1], ", No of Validation Samples : ", d2[1] ))
+```
+
+## Model Prediction
+
+We will try Random Forest and SVM, two well known methods which gives high accuracies
+
+### Method 1 Random Forests
+
+```{r cache=TRUE}
+set.seed(1234)
+fitControl1<-trainControl(method="cv", number=2, allowParallel=T, verbose=T)
+rffit<-train(classe~.,data=TrainSubset, method="rf", trControl=fitControl1, verbose=F)
+rffit$finalModel
+```
+
+
+```{r}
+predrf<-predict(rffit, newdata=TestSubset)
+confusionMatrix(predrf, TestSubset$classe)
+```
+
+
+```{r}
+pred20<-predict(rffit, newdata=testing)
+# Output for the prediction of the 20 cases provided
+pred20
+```
+
+
+### Method 2 SVM
+
+```{r cache=TRUE}
+set.seed(1234)
+fitControl2<-trainControl(method="cv", number=2, allowParallel=T, verbose=T)
+svmfit<-train(classe~.,data=TrainSubset, method="svmRadial", trControl=fitControl2, verbose=F)
+svmfit$finalModel
+```
+
+```{r}
+predSVM<-predict(svmfit, newdata=TestSubset)
+confusionMatrix(predrf, TestSubset$classe)
+```
+
+
+```{r}
+pred20_svm <- predict(svmfit, newdata=testing)
+pred20_svm
+```
+
+## Conclusion
+
+Both Random Forests and SVM gave same results.  
+
+
+
+
+
+
+
+  
